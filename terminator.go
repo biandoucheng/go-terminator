@@ -9,7 +9,19 @@ import (
 	"time"
 )
 
-// 销毁处理
+/*
+..................................................................................................
+. TerminatedHandler Program interrupt handling handle
+. Implement a series of rescue methods before program interruption
+.
+. Init   	Initialize the interrupt handle and set the monitoring signal
+. Register  Register the interrupt rescue method, set the method name (the previous one will be overwritten if it is repeated), the execution priority (the execution order is unpredictable if the same priority is the same), the execution timeout, and the execution method
+. Remove	Remove a method from the registered map
+. RunFuncs	Execute each method in order of priority
+. Listen	Monitor the program interrupt signal and trigger the execution of the rescue method
+. Run		Execute Listen in child thread
+..................................................................................................
+*/
 type TerminatedHandler struct {
 	sync.Mutex
 	stoped       bool                     // stop or not
@@ -59,7 +71,7 @@ func (t *TerminatedHandler) Register(name string, priority int, timeout time.Dur
 	return true
 }
 
-func (t *TerminatedHandler) Remove(name string, abs bool) bool {
+func (t *TerminatedHandler) Remove(name string) bool {
 	t.Lock()
 	defer t.Unlock()
 
