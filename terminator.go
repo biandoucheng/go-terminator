@@ -24,6 +24,7 @@ import (
 */
 type TerminatedHandler struct {
 	sync.Mutex
+	listenChan   chan os.Signal           // Listening channel
 	stoped       bool                     // stop or not
 	sigs         []os.Signal              // Target monitoring signal
 	funcTimeMap  map[string]time.Duration // Map recording method execution timeout
@@ -32,8 +33,6 @@ type TerminatedHandler struct {
 }
 
 var (
-	// Signal monitoring channel
-	listenChan = make(chan os.Signal, 1)
 	// Default target monitoring signal
 	defaultListenSigs = []os.Signal{syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGUSR1, syscall.SIGUSR2}
 )
@@ -46,6 +45,7 @@ func (t *TerminatedHandler) Init(sigs []os.Signal) {
 		t.sigs = defaultListenSigs
 	}
 	t.stoped = false
+	t.listenChan = make(chan os.Signal, 1)
 	t.funcTimeMap = map[string]time.Duration{}
 	t.funcPriority = map[string]int{}
 	t.funcMap = map[string]func(){}
@@ -123,15 +123,15 @@ func (t *TerminatedHandler) RunFuncs() {
 
 func (t *TerminatedHandler) Listen() {
 	// Interrupt signal monitoring
-	signal.Notify(listenChan, t.sigs...)
-	sig := <-listenChan
+	signal.Notify(t.listenChan, t.sigs...)
+	sig := <-t.listenChan
 	fmt.Printf(terminatedInfo, sig.String())
 
 	// Execute the method before system interruption
 	t.RunFuncs()
 
 	// Turn off listening and reissue the interrupt command
-	signal.Stop(listenChan)
+	signal.Stop(t.listenChan)
 	syscall.Kill(syscall.Getpid(), syscall.SIGINT)
 }
 
